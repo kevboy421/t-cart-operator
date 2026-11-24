@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>T-Cart Operator — 16-Bit Corrugated Box Factory Sim</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#16191d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="T-Cart">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Main Display Wrapper -->
+  <div id="game-wrapper">
+    <div id="canvas-container">
+      <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+      <!-- Quick Touch, Audio & Pause Overlay Buttons on Top Bar for click/tap -->
+      <div id="top-quick-bar">
+        <button id="quick-touch-btn" class="quick-btn" title="Toggle On-Screen Touch Controls">🎮</button>
+        <button id="quick-mute-btn" class="quick-btn" title="Toggle Sound [M]">🔊</button>
+        <button id="quick-pause-btn" class="quick-btn" title="Pause Game [P / Esc]">⏸</button>
+      </div>
+
+      <!-- Mobile / Touch Controls Overlay -->
+      <div id="touch-controls">
+        <div class="touch-group touch-left">
+          <button id="btn-left" class="t-btn" data-key="ArrowLeft">◀</button>
+          <button id="btn-right" class="t-btn" data-key="ArrowRight">▶</button>
+        </div>
+        <div class="touch-group touch-right">
+          <div class="touch-row">
+            <button id="btn-feed" class="t-btn t-action" data-key="KeyW">▲ FEED</button>
+            <button id="btn-jam" class="t-btn t-action wrench-btn" data-key="KeyE">🔧 FIX</button>
+          </div>
+          <div class="touch-row">
+            <button id="btn-store" class="t-btn t-action" data-key="KeyS">▼ STORE</button>
+            <button id="btn-pull" class="t-btn t-action" data-key="Space">⚡ PULL</button>
+            <button id="btn-swap" class="t-btn t-action swap-btn" data-key="KeyQ">🔄 SWAP</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Title Screen -->
+    <div id="modal-title" class="modal-overlay active">
+      <div class="modal-card industrial-panel">
+        <div class="hazard-stripe top"></div>
+        <div class="modal-header">
+          <h1 class="glitch-title">T-CART OPERATOR</h1>
+          <p class="subtitle">CORRUGATED BOX PLANT SIMULATION • 16-BIT</p>
+        </div>
+        <div class="modal-body title-content">
+          <div class="title-instructions">
+            <div class="instruction-box">
+              <h3>OPERATOR OBJECTIVES</h3>
+              <ul>
+                <li>Drive the motorized T-Cart across 8 plant bays along the transfer rail.</li>
+                <li>Pick up corrugated sheets from the <strong>Corrugator Stacker (Bay 0)</strong>.</li>
+                <li>Feed matching board grades to active <strong>Flexo Folder-Gluers (Bays 1–6)</strong>.</li>
+                <li>Buffer excess stacks into <strong>WIP Roller Lanes</strong>; pull back when lines starve.</li>
+                <li>Dump warped sheets & orphans at the <strong>Scrap Baler (Bay 7)</strong> for QC bonus!</li>
+                <li>Maintain <strong>High OEE (Availability, Performance, Quality)</strong> for bonus cash!</li>
+              </ul>
+            </div>
+            <div class="instruction-box controls-box">
+              <h3>STATION CONTROLS</h3>
+              <p><strong>[A] / [D]</strong> or <strong>[◀] / [▶]</strong> — Drive T-Cart (Magnetic bay snapping)</p>
+              <p><strong>[W]</strong> or <strong>[▲]</strong> — Feed UP into Flexo / Grab Upper Stacker / Baler Dump</p>
+              <p><strong>[S]</strong> or <strong>[▼]</strong> — Store DOWN into WIP Lane / Lower Stacker / Baler Dump</p>
+              <p><strong>[SPACE]</strong> — Pull FROM WIP Lane / Smart Grab Stacker / Baler Dump</p>
+              <p><strong>[E] (Hold 1.2s)</strong> — Clear Flexo Jam at line</p>
+              <p><strong>[Q]</strong> — Swap Active Bed (Twin-Bed upgrade)</p>
+              <p><strong>[P] / [ESC]</strong> — Pause • <strong>[M]</strong> — Mute Audio</p>
+            </div>
+          </div>
+          <div id="save-status" class="save-status-text">No active shift detected.</div>
+        </div>
+        <div class="modal-footer title-buttons">
+          <button id="btn-start-game" class="retro-btn primary-btn">START NEW SHIFT</button>
+          <button id="btn-continue-game" class="retro-btn secondary-btn" style="display:none;">CONTINUE SHIFT</button>
+          <button id="btn-open-shop-title" class="retro-btn accent-btn">UPGRADE SHOP</button>
+          <button id="btn-reset-save" class="retro-btn danger-btn">RESET DATA</button>
+        </div>
+        <div class="hazard-stripe bottom"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: End-of-Shift Summary (OEE Report) -->
+    <div id="modal-summary" class="modal-overlay">
+      <div class="modal-card industrial-panel summary-panel">
+        <div class="hazard-stripe top"></div>
+        <div class="modal-header">
+          <h2 id="summary-shift-title">SHIFT 1 COMPLETED — 14:00 WHISTLE</h2>
+          <p class="subtitle">CORRUGATED CONVERTING OPERATIONS REPORT</p>
+        </div>
+        <div class="modal-body summary-body">
+          <div class="summary-columns">
+            <!-- Left: Financial Ledger -->
+            <div class="summary-col ledger-col">
+              <h3>FINANCIAL LEDGER</h3>
+              <div class="ledger-row"><span>Boxes Shipped:</span><strong id="stat-boxes-shipped">0</strong></div>
+              <div class="ledger-row"><span>Gross Box Revenue:</span><strong id="stat-gross-rev" class="text-green">+$0.00</strong></div>
+              <div class="ledger-row"><span>Job Completion Bonuses:</span><strong id="stat-job-bonuses" class="text-green">+$0.00</strong></div>
+              <div class="ledger-row"><span>Rush Order Multipliers:</span><strong id="stat-rush-bonuses" class="text-green">+$0.00</strong></div>
+              <div class="ledger-row"><span>QC Warped Baler Rewards:</span><strong id="stat-baler-bonuses" class="text-green">+$0.00</strong></div>
+              <div class="ledger-row divider"></div>
+              <div class="ledger-row"><span>Downtime Starvation Penalties:</span><strong id="stat-downtime-pen" class="text-red">-$0.00</strong></div>
+              <div class="ledger-row"><span>Corrugator Backlog Penalties:</span><strong id="stat-backlog-pen" class="text-red">-$0.00</strong></div>
+              <div class="ledger-row divider"></div>
+              <div class="ledger-row total-row"><span>Shift Net Earnings:</span><strong id="stat-net-earnings" class="text-green">$0.00</strong></div>
+              <div class="ledger-row bank-row"><span>Total Available Capital:</span><strong id="stat-total-bank" class="text-gold">$0.00</strong></div>
+            </div>
+
+            <!-- Right: OEE Scorecard -->
+            <div class="summary-col oee-col">
+              <h3>OVERALL EQUIPMENT EFFECTIVENESS (OEE)</h3>
+              <div class="oee-grade-container">
+                <div id="oee-grade-badge" class="grade-badge grade-s">A</div>
+                <div class="oee-overall-text">
+                  <div class="oee-big-num" id="stat-oee-overall">88.5%</div>
+                  <div class="oee-sub" id="stat-oee-status">WORLD CLASS OPERATION</div>
+                </div>
+              </div>
+              <div class="oee-breakdown">
+                <div class="oee-bar-row">
+                  <div class="oee-label"><span>Availability</span><span id="stat-oee-avail">92%</span></div>
+                  <div class="prog-track"><div id="bar-oee-avail" class="prog-fill" style="width:92%"></div></div>
+                </div>
+                <div class="oee-bar-row">
+                  <div class="oee-label"><span>Performance</span><span id="stat-oee-perf">86%</span></div>
+                  <div class="prog-track"><div id="bar-oee-perf" class="prog-fill" style="width:86%"></div></div>
+                </div>
+                <div class="oee-bar-row">
+                  <div class="oee-label"><span>Quality</span><span id="stat-oee-qual">98%</span></div>
+                  <div class="prog-track"><div id="bar-oee-qual" class="prog-fill" style="width:98%"></div></div>
+                </div>
+              </div>
+              <div id="oee-bonus-banner" class="bonus-banner">
+                🏆 OEE TARGET REACHED (≥80%): <strong>+$250 CASH BONUS AWARDED!</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer summary-buttons">
+          <button id="btn-open-shop-summary" class="retro-btn accent-btn">UPGRADE SHOP</button>
+          <button id="btn-next-shift" class="retro-btn primary-btn">START SHIFT 2 ➔</button>
+        </div>
+        <div class="hazard-stripe bottom"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: Upgrade Shop -->
+    <div id="modal-shop" class="modal-overlay">
+      <div class="modal-card industrial-panel shop-panel">
+        <div class="hazard-stripe top"></div>
+        <div class="modal-header shop-header">
+          <div>
+            <h2>PLANT MAINTENANCE & UPGRADE SHOP</h2>
+            <p class="subtitle">PURCHASE AUTOMATION, LINE COMMISSIONS & CART UPGRADES</p>
+          </div>
+          <div class="shop-cash-badge">
+            <span>PLANT CAPITAL:</span>
+            <strong id="shop-cash-val">$0.00</strong>
+          </div>
+        </div>
+        <div class="modal-body shop-body">
+          <div id="shop-catalog" class="shop-grid">
+            <!-- Dynamically populated 10 upgrades -->
+          </div>
+        </div>
+        <div class="modal-footer shop-footer">
+          <button id="btn-close-shop" class="retro-btn primary-btn">BACK TO OPERATIONS</button>
+        </div>
+        <div class="hazard-stripe bottom"></div>
+      </div>
+    </div>
+
+    <!-- MODAL: Pause Screen -->
+    <div id="modal-pause" class="modal-overlay">
+      <div class="modal-card industrial-panel pause-panel">
+        <div class="hazard-stripe top"></div>
+        <div class="modal-header">
+          <h2>SHIFT PAUSED</h2>
+          <p class="subtitle">MACHINES IDLE • CLOCK HALTED</p>
+        </div>
+        <div class="modal-body pause-body">
+          <button id="btn-resume-game" class="retro-btn primary-btn btn-block">RESUME SHIFT [ESC / P]</button>
+          <button id="btn-pause-shop" class="retro-btn accent-btn btn-block">UPGRADE SHOP</button>
+          <button id="btn-toggle-sound" class="retro-btn secondary-btn btn-block">SOUND: ON [M]</button>
+          <button id="btn-quit-title" class="retro-btn danger-btn btn-block">QUIT TO TITLE</button>
+        </div>
+        <div class="hazard-stripe bottom"></div>
+      </div>
+    </div>
+
+    <!-- Mobile Portrait Orientation Warning Overlay -->
+    <div id="rotate-overlay">
+      <div class="rotate-card industrial-panel">
+        <div class="hazard-stripe top"></div>
+        <div class="rotate-body">
+          <div class="rotate-icon">📱 ➔ 🔄</div>
+          <h2>ROTATE YOUR DEVICE</h2>
+          <p class="subtitle">T-CART OPERATOR IS DESIGNED FOR LANDSCAPE ORIENTATION</p>
+          <button id="btn-rotate-dismiss" class="retro-btn secondary-btn">PLAY ANYWAY</button>
+        </div>
+        <div class="hazard-stripe bottom"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main ES Module Bootstrapper -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
